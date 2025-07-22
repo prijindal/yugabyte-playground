@@ -1,0 +1,109 @@
+name: yb-singlezone
+
+networks:
+  yb-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.42.0.0/16
+          gateway: 10.42.0.1
+
+x-common-master: &common-master
+  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:7000"]
+    interval: 5s
+    timeout: 2s
+    retries: 5
+  networks:
+    - yb-net
+
+x-common-tserver:: &common-tserver
+  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  depends_on:
+    ybmaster0:
+      condition: service_healthy
+    ybmaster1:
+      condition: service_healthy
+    ybmaster2:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:9000"]
+    interval: 5s
+    timeout: 2s
+    retries: 10
+  networks:
+    - yb-net
+
+services:
+  ybmaster0:
+    <<: *common-master
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --webserver_interface=0.0.0.0
+      - --rpc_bind_addresses=0.0.0.0
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    ports:
+      - 7000:7000
+  ybmaster1:
+    <<: *common-master
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --webserver_interface=0.0.0.0
+      - --rpc_bind_addresses=0.0.0.0
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    ports:
+      - 7001:7000
+  ybmaster2:
+    <<: *common-master
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --webserver_interface=0.0.0.0
+      - --rpc_bind_addresses=0.0.0.0
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    ports:
+      - 7002:7000
+
+  ybtserver0:
+    <<: *common-tserver
+    deploy:
+      replicas: 3
+    command: 
+      - /home/yugabyte/bin/yb-tserver
+      - --fs_data_dirs=/data
+      - --enable_ysql
+      - --webserver_interface=0.0.0.0
+      - --rpc_bind_addresses=0.0.0.0
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --tserver_master_addrs=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+
+  yb-workload-simulator:
+    image: yb-workfload-simulator
+    restart: always
+    container_name: yb-workload-simulator
+    depends_on:
+      ybtserver0:
+        condition: service_healthy
+    ports:
+      - 8081:8080
+    environment:
+      JAVA_OPTS: -Dnode=ybtserver0
+    networks:
+      - yb-net
