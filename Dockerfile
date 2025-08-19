@@ -1,6 +1,6 @@
 ARG JAVA_VERSION=19
 
-ARG JRE_IMAGE=eclipse-temurin
+ARG JRE_IMAGE=docker.io/library/eclipse-temurin
 ARG JRE_IMAGE_TAG=${JAVA_VERSION}-jre
 ARG JAR_FILE=yb-workload-sim.jar
 ARG APP_NAME=workload-simulator

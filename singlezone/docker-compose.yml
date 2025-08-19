@@ -9,17 +9,28 @@ networks:
           gateway: 10.42.0.1
 
 x-common-master: &common-master
-  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  image: docker.io/yugabytedb/yugabyte:2025.1.0.1-b3
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:7000"]
     interval: 5s
     timeout: 2s
     retries: 5
+  command:
+    - /home/yugabyte/bin/yb-master
+    - --fs_data_dirs=/data
+    - --webserver_interface=0.0.0.0
+    - --rpc_bind_addresses=0.0.0.0
+    - --replication-factor=3
+    - --placement_cloud=local
+    - --placement_region=local
+    - --placement_zone=docker0
+    - --ysql_num_shards_per_tserver=1
+    - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
   networks:
     - yb-net
 
 x-common-tserver:: &common-tserver
-  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  image: docker.io/yugabytedb/yugabyte:2025.1.0.1-b3
   depends_on:
     ybmaster0:
       condition: service_healthy
@@ -32,67 +43,68 @@ x-common-tserver:: &common-tserver
     interval: 5s
     timeout: 2s
     retries: 10
+  command: 
+    - /home/yugabyte/bin/yb-tserver
+    - --fs_data_dirs=/data
+    - --enable_ysql
+    - --ysql_enable_auth=true
+    - --ysql_pg_conf_csv=password_encryption=scram-sha-256
+    - --webserver_interface=0.0.0.0
+    - --rpc_bind_addresses=0.0.0.0
+    - --placement_cloud=local
+    - --placement_region=local
+    - --placement_zone=docker0
+    - --ysql_num_shards_per_tserver=1
+    - --tserver_master_addrs=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
   networks:
     - yb-net
 
 services:
   ybmaster0:
     <<: *common-master
-    command:
-      - /home/yugabyte/bin/yb-master
-      - --fs_data_dirs=/data
-      - --webserver_interface=0.0.0.0
-      - --rpc_bind_addresses=0.0.0.0
-      - --replication-factor=3
-      - --placement_cloud=local
-      - --placement_region=local
-      - --placement_zone=docker0
-      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    container_name: ybmaster0
+    volumes:
+      - ybmaster0:/data
     ports:
       - 7000:7000
   ybmaster1:
     <<: *common-master
-    command:
-      - /home/yugabyte/bin/yb-master
-      - --fs_data_dirs=/data
-      - --webserver_interface=0.0.0.0
-      - --rpc_bind_addresses=0.0.0.0
-      - --replication-factor=3
-      - --placement_cloud=local
-      - --placement_region=local
-      - --placement_zone=docker0
-      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    container_name: ybmaster1
+    volumes:
+      - ybmaster1:/data
     ports:
       - 7001:7000
   ybmaster2:
     <<: *common-master
-    command:
-      - /home/yugabyte/bin/yb-master
-      - --fs_data_dirs=/data
-      - --webserver_interface=0.0.0.0
-      - --rpc_bind_addresses=0.0.0.0
-      - --replication-factor=3
-      - --placement_cloud=local
-      - --placement_region=local
-      - --placement_zone=docker0
-      - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    container_name: ybmaster2
+    volumes:
+      - ybmaster2:/data
     ports:
       - 7002:7000
 
   ybtserver0:
     <<: *common-tserver
-    deploy:
-      replicas: 3
-    command: 
-      - /home/yugabyte/bin/yb-tserver
-      - --fs_data_dirs=/data
-      - --enable_ysql
-      - --webserver_interface=0.0.0.0
-      - --rpc_bind_addresses=0.0.0.0
-      - --placement_cloud=local
-      - --placement_region=local
-      - --placement_zone=docker0
-      - --tserver_master_addrs=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
+    container_name: ybtserver0
+    volumes:
+      - ybtserver0:/data
+    ports:
+      - 9000:9000
+
+  ybtserver1:
+    <<: *common-tserver
+    container_name: ybtserver1
+    volumes:
+      - ybtserver1:/data
+    ports:
+      - 9001:9000
+
+  ybtserver2:
+    <<: *common-tserver
+    container_name: ybtserver2
+    volumes:
+      - ybtserver2:/data
+    ports:
+      - 9002:9000
 
   yb-workload-simulator:
     image: yb-workfload-simulator
@@ -104,6 +116,14 @@ services:
     ports:
       - 8081:8080
     environment:
-      JAVA_OPTS: -Dnode=ybtserver0
+      JAVA_OPTS: -Dnode=ybtserver0,ybtserver1,ybtserver2 -Ddbuser=workload -Ddbpassword=workload -Ddbname=workload
     networks:
       - yb-net
+
+volumes:
+  ybmaster0:
+  ybmaster1:
+  ybmaster2:
+  ybtserver0:
+  ybtserver1:
+  ybtserver2:
