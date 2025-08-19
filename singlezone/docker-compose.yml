@@ -15,19 +15,6 @@ x-common-master: &common-master
     interval: 5s
     timeout: 2s
     retries: 5
-  command:
-    - /home/yugabyte/bin/yb-master
-    - --fs_data_dirs=/data
-    - --webserver_interface=0.0.0.0
-    - --rpc_bind_addresses=0.0.0.0
-    - --replication-factor=3
-    - --placement_cloud=local
-    - --placement_region=local
-    - --placement_zone=docker0
-    - --ysql_num_shards_per_tserver=1
-    - --master_addresses=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
-  networks:
-    - yb-net
 
 x-common-tserver:: &common-tserver
   image: docker.io/yugabytedb/yugabyte:2025.1.0.1-b3
@@ -43,21 +30,6 @@ x-common-tserver:: &common-tserver
     interval: 5s
     timeout: 2s
     retries: 10
-  command: 
-    - /home/yugabyte/bin/yb-tserver
-    - --fs_data_dirs=/data
-    - --enable_ysql
-    - --ysql_enable_auth=true
-    - --ysql_pg_conf_csv=password_encryption=scram-sha-256
-    - --webserver_interface=0.0.0.0
-    - --rpc_bind_addresses=0.0.0.0
-    - --placement_cloud=local
-    - --placement_region=local
-    - --placement_zone=docker0
-    - --ysql_num_shards_per_tserver=1
-    - --tserver_master_addrs=ybmaster0:7100,ybmaster1:7100,ybmaster2:7100
-  networks:
-    - yb-net
 
 services:
   ybmaster0:
@@ -67,6 +39,21 @@ services:
       - ybmaster0:/data
     ports:
       - 7000:7000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.100
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.100
+      - --rpc_bind_addresses=10.42.1.100
+      - --master_addresses=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
+
   ybmaster1:
     <<: *common-master
     container_name: ybmaster1
@@ -74,6 +61,20 @@ services:
       - ybmaster1:/data
     ports:
       - 7001:7000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.101
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.101
+      - --rpc_bind_addresses=10.42.1.101
+      - --master_addresses=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
   ybmaster2:
     <<: *common-master
     container_name: ybmaster2
@@ -81,6 +82,20 @@ services:
       - ybmaster2:/data
     ports:
       - 7002:7000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.102
+    command:
+      - /home/yugabyte/bin/yb-master
+      - --fs_data_dirs=/data
+      - --replication-factor=3
+      - --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.102
+      - --rpc_bind_addresses=10.42.1.102
+      - --master_addresses=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
 
   ybtserver0:
     <<: *common-tserver
@@ -89,6 +104,22 @@ services:
       - ybtserver0:/data
     ports:
       - 9000:9000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.200
+    command:
+      - /home/yugabyte/bin/yb-tserver
+      - --fs_data_dirs=/data
+      - --enable_ysql
+      - --ysql_enable_auth=true
+      - --ysql_pg_conf_csv=password_encryption=scram-sha-256
+      -  --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.200
+      - --rpc_bind_addresses=10.42.1.200
+      - --tserver_master_addrs=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
 
   ybtserver1:
     <<: *common-tserver
@@ -97,6 +128,22 @@ services:
       - ybtserver1:/data
     ports:
       - 9001:9000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.201
+    command:
+      - /home/yugabyte/bin/yb-tserver
+      - --fs_data_dirs=/data
+      - --enable_ysql
+      - --ysql_enable_auth=true
+      - --ysql_pg_conf_csv=password_encryption=scram-sha-256
+      -  --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.201
+      - --rpc_bind_addresses=10.42.1.201
+      - --tserver_master_addrs=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
 
   ybtserver2:
     <<: *common-tserver
@@ -105,6 +152,22 @@ services:
       - ybtserver2:/data
     ports:
       - 9002:9000
+    networks:
+      yb-net:
+        ipv4_address: 10.42.1.202
+    command:
+      - /home/yugabyte/bin/yb-tserver
+      - --fs_data_dirs=/data
+      - --enable_ysql
+      - --ysql_enable_auth=true
+      - --ysql_pg_conf_csv=password_encryption=scram-sha-256
+      -  --placement_cloud=local
+      - --placement_region=local
+      - --placement_zone=docker0
+      - --ysql_num_shards_per_tserver=1
+      - --webserver_interface=10.42.1.202
+      - --rpc_bind_addresses=10.42.1.202
+      - --tserver_master_addrs=10.42.1.100:7100,10.42.1.101:7100,10.42.1.102:7100
 
   yb-workload-simulator:
     image: yb-workfload-simulator
@@ -116,7 +179,7 @@ services:
     ports:
       - 8081:8080
     environment:
-      JAVA_OPTS: -Dnode=ybtserver0,ybtserver1,ybtserver2 -Ddbuser=workload -Ddbpassword=workload -Ddbname=workload
+      JAVA_OPTS: -Dnode=10.42.1.200,10.42.1.201,10.42.1.202 -Ddbuser=workload -Ddbpassword=workload -Ddbname=workload
     networks:
       - yb-net
 
