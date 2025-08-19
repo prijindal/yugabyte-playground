@@ -9,7 +9,7 @@ networks:
           gateway: 10.42.0.1
 
 x-common-master: &common-master
-  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  image: yugabytedb/yugabyte:2025.1.0.1-b3
   healthcheck:
     test: ["CMD", "curl", "-f", "http://localhost:7000"]
     interval: 5s
@@ -19,7 +19,7 @@ x-common-master: &common-master
     - yb-net
 
 x-common-tserver:: &common-tserver
-  image: yugabytedb/yugabyte:2024.2.4.0-b89
+  image: yugabytedb/yugabyte:2025.1.0.1-b3
   depends_on:
     ybmaster0:
       condition: service_healthy
